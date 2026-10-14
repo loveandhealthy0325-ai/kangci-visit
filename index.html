@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>康慈養護｜探視預約</title>
+
+  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+
+  <style>
+    body {
+      font-family: Arial, "Microsoft JhengHei", sans-serif;
+      background: #f5f5f5;
+      margin: 0;
+      padding: 20px;
+    }
+
+    .box {
+      max-width: 500px;
+      margin: 20px auto;
+      background: white;
+      padding: 25px;
+      border-radius: 15px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+    }
+
+    h2 {
+      text-align: center;
+      margin-bottom: 25px;
+    }
+
+    label {
+      display: block;
+      margin-top: 15px;
+      font-weight: bold;
+    }
+
+    input, select {
+      width: 100%;
+      padding: 12px;
+      margin-top: 6px;
+      box-sizing: border-box;
+      font-size: 16px;
+      border: 1px solid #ccc;
+      border-radius: 7px;
+    }
+
+    button {
+      width: 100%;
+      margin-top: 25px;
+      padding: 15px;
+      font-size: 18px;
+      border: none;
+      border-radius: 8px;
+      background: #06C755;
+      color: white;
+    }
+
+    button:disabled {
+      background: #aaa;
+    }
+
+    #message {
+      margin-top: 20px;
+      text-align: center;
+      line-height: 1.7;
+      font-weight: bold;
+    }
+
+    .notice {
+      margin-top: 15px;
+      font-size: 14px;
+      color: #666;
+      line-height: 1.6;
+    }
+  </style>
+</head>
+
+<body>
+
+<div class="box">
+
+  <h2>康慈養護｜探視預約</h2>
+
+  <label>探視日期</label>
+  <input type="date" id="date">
+
+  <label>探視時段</label>
+  <select id="time">
+    <option value="">請選擇時段</option>
+    <option value="14:00～15:00">14:00～15:00</option>
+    <option value="15:00～16:00">15:00～16:00</option>
+  </select>
+
+  <label>住民姓名</label>
+  <input type="text" id="resident" placeholder="請輸入住民姓名">
+
+  <label>探視家屬姓名</label>
+  <input type="text" id="visitor" placeholder="請輸入您的姓名">
+
+  <label>聯絡電話</label>
+  <input type="tel" id="phone" placeholder="例如：0912345678">
+
+  <button type="button" id="submitBtn" disabled>
+    確認預約
+  </button>
+
+  <div id="message">
+    ⏳ 正在連接 LINE...
+  </div>
+
+  <div class="notice">
+    預約完成後，系統將透過康慈官方 LINE 傳送預約確認訊息。
+  </div>
+
+</div>
+
+<script>
+
+const LIFF_ID = "2012022429-0mPX5zBd";
+
+const GAS_URL =
+  "https://script.google.com/macros/s/AKfycbzty9KxY0Oru2gsoK82tX6D39LuXYJhSmV-BeCv76EnjhDxp7sC6OtTTE-CL1x3utRS4w/exec";
+
+let lineUserId = "";
+
+const message =
+  document.getElementById("message");
+
+const button =
+  document.getElementById("submitBtn");
+
+
+async function initializeLiff() {
+
+  try {
+
+    await liff.init({
+      liffId: LIFF_ID
+    });
+
+    if (!liff.isLoggedIn()) {
+
+      message.innerHTML =
+        "⏳ 正在登入 LINE...";
+
+      liff.login();
+
+      return;
+    }
+
+    const profile =
+      await liff.getProfile();
+
+    lineUserId =
+      profile.userId;
+
+    message.innerHTML =
+      "✅ LINE 連線成功，可以預約。";
+
+    button.disabled = false;
+
+  } catch (error) {
+
+    console.error(error);
+
+    message.innerHTML =
+      "❌ LINE 連線失敗：" +
+      (error.message || String(error));
+  }
+}
+
+
+button.addEventListener(
+  "click",
+  submitBooking
+);
+
+
+async function submitBooking() {
+
+  const date =
+    document.getElementById("date").value;
+
+  const time =
+    document.getElementById("time").value;
+
+  const resident =
+    document.getElementById("resident").value.trim();
+
+  const visitor =
+    document.getElementById("visitor").value.trim();
+
+  const phone =
+    document.getElementById("phone").value.trim();
+
+
+  if (
+    !date ||
+    !time ||
+    !resident ||
+    !visitor ||
+    !phone
+  ) {
+
+    alert("請將預約資料填寫完整。");
+
+    return;
+  }
+
+
+  if (!lineUserId) {
+
+    alert(
+      "尚未取得 LINE 使用者資料，請重新開啟預約頁面。"
+    );
+
+    return;
+  }
+
+
+  button.disabled = true;
+
+  button.innerText =
+    "預約處理中...";
+
+  message.innerHTML =
+    "⏳ 正在建立預約，請稍候...";
+
+
+  const data = {
+
+    date: date,
+    time: time,
+    resident: resident,
+    visitor: visitor,
+    phone: phone,
+    userId: lineUserId
+
+  };
+
+
+  try {
+
+    await fetch(
+      GAS_URL,
+      {
+        method: "POST",
+
+        body:
+          JSON.stringify(data)
+      }
+    );
+
+
+    message.innerHTML =
+      "✅ 預約已送出！<br><br>" +
+      "探視日期：" + date + "<br>" +
+      "探視時段：" + time + "<br><br>" +
+      "請查看康慈官方 LINE 的預約確認訊息。";
+
+    button.innerText =
+      "預約完成";
+
+
+  } catch (error) {
+
+    console.error(error);
+
+    message.innerHTML =
+      "❌ 預約送出失敗，請稍後再試。";
+
+    button.disabled = false;
+
+    button.innerText =
+      "重新送出";
+  }
+
+}
+
+
+initializeLiff();
+
+</script>
+
+</body>
+</html>
